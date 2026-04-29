@@ -1,0 +1,106 @@
+<?php
+session_start();
+
+/*
+    Only allow access if user is required to change password
+*/
+if (!isset($_SESSION['force_change'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$error = "";
+$success = "";
+
+/*
+    Handle form submission
+*/
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $new = $_POST['new_pass'] ?? '';
+    $confirm = $_POST['confirm_pass'] ?? '';
+
+    if ($new !== $confirm) {
+        $error = "Passwords do not match.";
+    } elseif (strlen($new) < 6) {
+        $error = "Password must be at least 6 characters.";
+    } else {
+
+        /*
+            TODO:
+            Update password in database
+            SET is_default_password = 0
+        */
+
+        unset($_SESSION['force_change']);
+
+        $success = "Password updated successfully. Redirecting...";
+
+        header("refresh:2;url=login.php");
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Change Password | GJC EduPay</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- HIWALAY NA CSS -->
+    <link rel="stylesheet" href="assets/css/change_password.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        <div class="card-box">
+
+            <div class="badge-top">Security Update Required</div>
+
+            <div class="title">Set Your New Password</div>
+
+            <div class="desc">
+                This is your first login. For security reasons, you are required to change your default password before
+                accessing your account dashboard.
+            </div>
+
+            <?php if ($error): ?>
+            <div class="alert alert-danger"><?php echo $error; ?></div>
+            <?php endif; ?>
+
+            <?php if ($success): ?>
+            <div class="alert alert-success"><?php echo $success; ?></div>
+            <?php endif; ?>
+
+            <form method="POST">
+
+                <div class="input-group-box">
+                    <input type="password" name="new_pass" required placeholder=" ">
+                    <label>New Password</label>
+                </div>
+
+                <div class="input-group-box">
+                    <input type="password" name="confirm_pass" required placeholder=" ">
+                    <label>Confirm Password</label>
+                </div>
+
+                <button type="submit">Update Password</button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

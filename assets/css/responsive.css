@@ -1,0 +1,205 @@
+/* =========================================
+   GLOBAL RESPONSIVE FIX (SAFE OVERRIDE)
+========================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Images & media */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Containers */
+.container,
+.container-fluid {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* =========================================
+   CARD FIXES (SAFE)
+========================================= */
+
+.card,
+.carDbg,
+.carDbg2 {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* =========================================
+   TABLE FIXES
+========================================= */
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* =========================================
+   GRID STACKING FIX
+========================================= */
+
+@media (max-width: 992px) {
+  .row > [class*="col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* =========================================
+   NAVBAR & SIDEBAR FIX
+========================================= */
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    left: -250px;
+    top: 0;
+    width: 250px;
+    height: 100%;
+    background: inherit;
+    z-index: 9999;
+    transition: 0.3s ease;
+  }
+
+  .sidebar.active {
+    left: 0;
+  }
+
+  .main-content,
+  .content,
+  .wrapper {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* =========================================
+   TEXT & SPACING FIX
+========================================= */
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 20px;
+  }
+  h2 {
+    font-size: 18px;
+  }
+  h3 {
+    font-size: 16px;
+  }
+
+  .card {
+    padding: 12px !important;
+  }
+
+  .navbar {
+    padding: 10px !important;
+  }
+}
+
+/* =========================================
+   BUTTON & INPUT FIX
+========================================= */
+
+@media (max-width: 768px) {
+  button,
+  .btn {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  input,
+  select {
+    width: 100%;
+  }
+}
+
+/* =========================================
+   OVERFLOW FIX
+========================================= */
+
+body,
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ========================= */
+/* LOGIN PAGE RESPONSIVE */
+/* ========================= */
+
+/* Tablet */
+@media (max-width: 992px) {
+  .login-card {
+    max-width: 90%;
+    padding: 25px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 20px;
+    height: auto;
+  }
+
+  .login-card {
+    width: 100%;
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .brand-title {
+    font-size: 24px;
+  }
+
+  .sub-text {
+    font-size: 12px;
+  }
+
+  .login-btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 15px;
+  }
+
+  .badge-top {
+    font-size: 10px;
+    padding: 5px 10px;
+  }
+
+  .input-group-box input {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
+/* Visitor Modal Responsive */
+@media (max-width: 768px) {
+  .guest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visitor-card {
+    margin-bottom: 10px;
+  }
+}
