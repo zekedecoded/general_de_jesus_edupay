@@ -277,6 +277,7 @@
 }
 
 .load-cash-btn,
+.print-voucher-btn,
 .refund-btn,
 .session-btn {
   min-height: 37px;
@@ -302,6 +303,20 @@
 
 .load-cash-btn:hover {
   color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.print-voucher-btn {
+  min-width: 78px;
+  padding: 0 13px;
+  background: #fff4cc;
+  color: #513f0d;
+  border: 1px solid rgba(217, 169, 40, 0.35);
+}
+
+.print-voucher-btn:hover {
+  background: #d9a928;
+  color: #032014;
   transform: translateY(-1px);
 }
 
@@ -454,6 +469,23 @@
 
 .visitor-load-btn:hover {
   transform: translateY(-1px);
+}
+
+.voucher-success-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 12px 0 10px;
+}
+
+.voucher-success-actions .visitor-load-btn,
+.voucher-success-actions .visitor-cancel-btn {
+  min-width: 120px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* RESPONSIVE */

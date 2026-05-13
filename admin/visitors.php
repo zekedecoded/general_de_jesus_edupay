@@ -255,6 +255,10 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                                             View
                                         </button>
 
+                                        <a class="print-voucher-btn" href="<?= ADMIN_URL ?>/print_voucher.php?id=<?= (int) $v['id'] ?>" target="_blank" rel="noopener">
+                                            Print
+                                        </a>
+
                                         <?php if ($v['is_refundable']): ?>
                                         <button type="button" class="refund-btn"
                                             onclick="return confirmRefund('<?php echo htmlspecialchars(addslashes($v['visitor_name'])); ?>', '<?php echo number_format($v['remaining_balance'], 2); ?>')">
@@ -332,6 +336,10 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                             <span class="text-muted small">QR Code renders here</span>
                         </div>
                         <p class="mt-3 fw-bold fs-5 text-success" id="successCode">VCH-XXXX</p>
+                        <div class="voucher-success-actions">
+                            <a id="printVoucherLink" class="visitor-load-btn" href="#" target="_blank" rel="noopener">Print Voucher</a>
+                            <button type="button" class="visitor-cancel-btn" data-bs-dismiss="modal">Done</button>
+                        </div>
                         <textarea id="rawPayload" class="form-control mt-2" rows="3" readonly style="font-size:10px; font-family:monospace;"></textarea>
                         <small class="text-muted mt-2 d-block">Use this JSON string in the scanner's manual input if QR camera is disabled.</small>
                     </div>
@@ -402,6 +410,7 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                 
                 document.getElementById('successCode').textContent = data.voucher_code;
                 document.getElementById('rawPayload').value = data.qr_payload;
+                document.getElementById('printVoucherLink').href = '<?= ADMIN_URL ?>/print_voucher.php?id=' + encodeURIComponent(data.voucher_id);
                 
                 // Realistically you'd use a JS QR library to draw data.qr_payload onto #qrPlaceholder
                 document.getElementById('qrPlaceholder').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(data.qr_payload) + '" alt="QR">';
