@@ -92,7 +92,7 @@ try {
 
             if ($visitorName === '') throw new RuntimeException('Visitor name is required.');
 
-            $result = $engine->createVoucher($amount, $visitorName, $visitorContact, $expiryHours, $userId);
+            $result = $engine->createVoucher($amount, $visitorName, $visitorContact, $userId, $expiryHours);
             echo json_encode($result);
             break;
 

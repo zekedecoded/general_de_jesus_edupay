@@ -1,17 +1,20 @@
 <?php
 require_once __DIR__ . '/../connection/config.php';
-$totalTransactions = 284;
-$todaysVolume = 12450;
-$pendingTransactions = 9;
-$completedToday = 42;
+require_once __DIR__ . '/../connection/pdo.php';
+require_once __DIR__ . '/../connection/app.php';
 
-$transactions = [
-    ["ref"=>"TXN-001","type"=>"Payment","amount"=>120,"sender"=>"Juan Dela Cruz","receiver"=>"Campus Canteen","status"=>"Completed","time"=>"10:20 AM"],
-    ["ref"=>"TXN-002","type"=>"Top-up","amount"=>500,"sender"=>"Maria Santos","receiver"=>"Cashier","status"=>"Pending","time"=>"09:40 AM"],
-    ["ref"=>"TXN-003","type"=>"Encashment","amount"=>2000,"sender"=>"Campus Store","receiver"=>"Finance Office","status"=>"Processing","time"=>"09:00 AM"],
-    ["ref"=>"TXN-004","type"=>"Payment","amount"=>80,"sender"=>"Carlo Reyes","receiver"=>"Library","status"=>"Completed","time"=>"Yesterday"],
-    ["ref"=>"TXN-005","type"=>"Refund","amount"=>150,"sender"=>"Finance Office","receiver"=>"Anna Morales","status"=>"Rejected","time"=>"Yesterday"]
+gjc_require_role(['admin']);
+
+$filters = [
+    'search' => trim((string) ($_GET['search'] ?? '')),
+    'type' => trim((string) ($_GET['type'] ?? '')),
+    'status' => trim((string) ($_GET['status'] ?? '')),
 ];
+
+$transactions = gjc_fetch_admin_transactions($db, $filters, 150);
+$stats = gjc_admin_transaction_stats(gjc_fetch_admin_transactions($db, [], 0));
+$typeOptions = gjc_transaction_type_options();
+$statusOptions = gjc_transaction_status_options();
 ?>
 
 <!DOCTYPE html>
@@ -25,6 +28,7 @@ $transactions = [
     <link rel="stylesheet" href="<?= CSS_URL ?>/admin.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/transactions.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/responsive.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
 </head>
@@ -97,7 +101,7 @@ $transactions = [
         <main class="admin-main transactions-page">
 
             <header class="topbar">
-                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                <button class="menu-btn" onclick="toggleSidebar()">&#9776;</button>
 
                 <div>
                     <h1>Transactions</h1>
@@ -119,7 +123,7 @@ $transactions = [
                         <img src="<?= ICONS_URL ?>/transactions.png" alt="">
                     </div>
                     <span>Total Transactions</span>
-                    <h2><?php echo $totalTransactions; ?></h2>
+                    <h2><?php echo (int) $stats['total_transactions']; ?></h2>
                     <p>All wallet activities</p>
                 </div>
 
@@ -128,8 +132,8 @@ $transactions = [
                         <img src="<?= ICONS_URL ?>/volume.png" alt="">
                     </div>
                     <span>Today's Volume</span>
-                    <h2>₱<?php echo number_format($todaysVolume, 2); ?></h2>
-                    <p>Transactions today</p>
+                    <h2><?php echo gjc_money($stats['todays_volume']); ?></h2>
+                    <p>Successful transactions today</p>
                 </div>
 
                 <div class="transaction-stat-card">
@@ -137,7 +141,7 @@ $transactions = [
                         <img src="<?= ICONS_URL ?>/pending-topups.png" alt="">
                     </div>
                     <span>Pending Transactions</span>
-                    <h2><?php echo $pendingTransactions; ?></h2>
+                    <h2><?php echo (int) $stats['pending_transactions']; ?></h2>
                     <p>Needs review</p>
                 </div>
 
@@ -146,7 +150,7 @@ $transactions = [
                         <img src="<?= ICONS_URL ?>/check.png" alt="">
                     </div>
                     <span>Completed Today</span>
-                    <h2><?php echo $completedToday; ?></h2>
+                    <h2><?php echo (int) $stats['completed_today']; ?></h2>
                     <p>Successful activities</p>
                 </div>
 
@@ -160,7 +164,7 @@ $transactions = [
                         <p>Search and filter wallet activity records.</p>
                     </div>
 
-                    <a href="<?= ADMIN_URL ?>/export_transactions.php" class="export-btn">
+                    <a href="<?= ADMIN_URL ?>/export_transactions.php?<?= http_build_query($filters); ?>" class="export-btn">
                         Export
                     </a>
                 </div>
@@ -169,28 +173,31 @@ $transactions = [
 
                     <div class="premium-field search-field">
                         <label>Search Transaction</label>
-                        <input type="text" name="search" placeholder="Reference, sender, receiver, or amount">
+                        <input type="text" name="search" placeholder="Reference, sender, receiver, or amount"
+                            value="<?php echo gjc_e($filters['search']); ?>">
                     </div>
 
                     <div class="premium-field">
                         <label>Type</label>
                         <select name="type">
-                            <option value="">All Types</option>
-                            <option value="payment">Payment</option>
-                            <option value="topup">Top-up</option>
-                            <option value="encashment">Encashment</option>
-                            <option value="refund">Refund</option>
+                            <?php foreach ($typeOptions as $value => $label): ?>
+                            <option value="<?php echo gjc_e($value); ?>"
+                                <?php echo $filters['type'] === $value ? 'selected' : ''; ?>>
+                                <?php echo gjc_e($label); ?>
+                            </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div class="premium-field">
                         <label>Status</label>
                         <select name="status">
-                            <option value="">All Status</option>
-                            <option value="completed">Completed</option>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="rejected">Rejected</option>
+                            <?php foreach ($statusOptions as $value => $label): ?>
+                            <option value="<?php echo gjc_e($value); ?>"
+                                <?php echo $filters['status'] === $value ? 'selected' : ''; ?>>
+                                <?php echo gjc_e($label); ?>
+                            </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
 
@@ -212,7 +219,7 @@ $transactions = [
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table transactions-table align-middle">
+                    <table class="table transactions-table align-middle js-datatable" id="transactionsTable" data-page-length="10">
                         <thead>
                             <tr>
                                 <th>Reference</th>
@@ -227,38 +234,45 @@ $transactions = [
                         </thead>
 
                         <tbody>
-                            <?php foreach($transactions as $t): ?>
+                            <?php if (empty($transactions)): ?>
                             <tr>
-                                <td class="reference-text"><?php echo $t["ref"]; ?></td>
+                                <td colspan="8" class="text-center py-4">No transactions matched the current filters.</td>
+                            </tr>
+                            <?php endif; ?>
+
+                            <?php foreach ($transactions as $transaction): ?>
+                            <tr>
+                                <td class="reference-text"><?php echo gjc_e($transaction['ref']); ?></td>
 
                                 <td>
-                                    <span class="type-pill <?php echo strtolower($t["type"]); ?>">
-                                        <?php echo $t["type"]; ?>
+                                    <span class="type-pill <?php echo gjc_e($transaction['type_slug']); ?>">
+                                        <?php echo gjc_e($transaction['type_label']); ?>
                                     </span>
                                 </td>
 
-                                <td class="transaction-amount">₱<?php echo number_format($t["amount"], 2); ?></td>
+                                <td class="transaction-amount"><?php echo gjc_money($transaction['amount']); ?></td>
 
                                 <td>
                                     <div class="party-cell">
-                                        <div class="party-avatar"><?php echo strtoupper(substr($t["sender"], 0, 1)); ?>
+                                        <div class="party-avatar">
+                                            <?php echo gjc_e(strtoupper(substr($transaction['sender'], 0, 1))); ?>
                                         </div>
-                                        <strong><?php echo $t["sender"]; ?></strong>
+                                        <strong><?php echo gjc_e($transaction['sender']); ?></strong>
                                     </div>
                                 </td>
 
-                                <td><?php echo $t["receiver"]; ?></td>
+                                <td><?php echo gjc_e($transaction['receiver']); ?></td>
 
                                 <td>
-                                    <span class="transaction-status <?php echo strtolower($t["status"]); ?>">
-                                        <?php echo $t["status"]; ?>
+                                    <span class="transaction-status <?php echo gjc_e($transaction['status_slug']); ?>">
+                                        <?php echo gjc_e($transaction['status_label']); ?>
                                     </span>
                                 </td>
 
-                                <td><?php echo $t["time"]; ?></td>
+                                <td><?php echo gjc_e($transaction['time_label']); ?></td>
 
                                 <td>
-                                    <a href="view_transaction.php?ref=<?php echo $t["ref"]; ?>"
+                                    <a href="<?= ADMIN_URL ?>/view_transaction.php?source=<?php echo gjc_e($transaction['source']); ?>&ref=<?php echo urlencode($transaction['ref']); ?>&id=<?php echo (int) $transaction['id']; ?>"
                                         class="details-btn">View</a>
                                 </td>
                             </tr>
@@ -275,6 +289,10 @@ $transactions = [
     </div>
 
     <script src="<?= JS_URL ?>/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= JS_URL ?>/admin_datatables.js"></script>
 
     <script>
     function toggleSidebar() {

@@ -454,6 +454,54 @@ body {
   border-color: #edf2ef;
 }
 
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  border: 1px solid rgba(6, 68, 32, 0.12);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: #fff;
+  color: #102018;
+  box-shadow: none !important;
+}
+
+.dataTables_wrapper .dataTables_filter label,
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_info {
+  color: #66756c !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  min-width: 220px;
+  margin-left: 8px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  border-radius: 12px !important;
+  border: none !important;
+  background: #eef8f1 !important;
+  color: #0b5c2c !important;
+  font-weight: 800;
+  margin-left: 6px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: linear-gradient(135deg, #0b5c2c, #0f7a42) !important;
+  color: #fff !important;
+}
+
+.gjc-datatable-top,
+.gjc-datatable-bottom {
+  margin-bottom: 14px;
+}
+
+.gjc-datatable-bottom {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
 .merchant-amount {
   color: var(--emerald-800) !important;
   font-weight: 900;

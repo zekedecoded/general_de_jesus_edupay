@@ -55,6 +55,7 @@ if (isset($_SESSION['force_change'])) {
     <link rel="stylesheet" href="<?= CSS_URL ?>/bootstrap.min.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/student.css?v=10">
     <link rel="stylesheet" href="<?= CSS_URL ?>/responsive.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -315,7 +316,7 @@ if (isset($_SESSION['force_change'])) {
                 </div>
                 <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table student-premium-table align-middle">
+                    <table class="table student-premium-table align-middle js-datatable" id="studentDashboardTransactionsTable" data-page-length="8">
                         <thead>
                             <tr>
                                 <th>Description</th>
@@ -346,6 +347,10 @@ if (isset($_SESSION['force_change'])) {
     </div>
 
     <script src="<?= JS_URL ?>/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= JS_URL ?>/admin_datatables.js"></script>
 
     <script>
     function toggleStudentSidebar() {

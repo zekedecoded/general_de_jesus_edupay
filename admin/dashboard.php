@@ -1,17 +1,16 @@
 <?php
 require_once __DIR__ . '/../connection/config.php';
 require_once __DIR__ . '/../connection/pdo.php';
-$totalUsers = 145;
-$activeStudents = 120;
-$activeMerchants = 8;
-$activeVisitors = 17;
-$circulatingBalance = 58250;
-$todaysVolume = 12450;
-$pendingTopups = 6;
-$pendingEncashments = 3;
+require_once __DIR__ . '/../connection/app.php';
+
+gjc_require_role(['admin']);
+
+$dashboard = gjc_admin_dashboard_data($db);
+$financials = $dashboard['system_financials'];
+$demographics = $dashboard['user_demographics'];
+$recentTransactions = $dashboard['recent_transactions'];
+$transactionChart = $dashboard['transaction_chart'];
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -22,8 +21,8 @@ $pendingEncashments = 3;
     <link rel="stylesheet" href="<?= CSS_URL ?>/bootstrap.min.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/admin.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/responsive.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -100,7 +99,7 @@ $pendingEncashments = 3;
         <main class="admin-main">
 
             <header class="topbar">
-                <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+                <button class="menu-btn" onclick="toggleSidebar()">&#9776;</button>
 
                 <div>
                     <h1>Admin Dashboard</h1>
@@ -115,7 +114,6 @@ $pendingEncashments = 3;
                 </div>
             </header>
 
-            <!-- Financial Overview -->
             <div class="section-title mb-3 mt-2">
                 <h4 style="font-size: 18px; font-weight: 800; color: var(--emerald-950); margin: 0;">System Financials</h4>
             </div>
@@ -127,8 +125,8 @@ $pendingEncashments = 3;
                             <img src="<?= ICONS_URL ?>/wallet.png" alt="">
                         </div>
                         <span>Circulating Balance</span>
-                        <h2>₱<?php echo number_format($circulatingBalance, 2); ?></h2>
-                        <p>All active wallets</p>
+                        <h2><?php echo gjc_money($financials['circulating_balance']); ?></h2>
+                        <p>Student, merchant, and active visitor funds</p>
                     </div>
                 </div>
 
@@ -138,8 +136,8 @@ $pendingEncashments = 3;
                             <img src="<?= ICONS_URL ?>/volume.png" alt="">
                         </div>
                         <span>Today's Volume</span>
-                        <h2>₱<?php echo number_format($todaysVolume, 2); ?></h2>
-                        <p>Transactions</p>
+                        <h2><?php echo gjc_money($financials['todays_volume']); ?></h2>
+                        <p>Successful transactions today</p>
                     </div>
                 </div>
 
@@ -149,8 +147,8 @@ $pendingEncashments = 3;
                             <img src="<?= ICONS_URL ?>/pending-topups.png" alt="">
                         </div>
                         <span>Pending Top-ups</span>
-                        <h2><?php echo $pendingTopups; ?></h2>
-                        <p>Awaiting cashier</p>
+                        <h2><?php echo (int) $financials['pending_topups']; ?></h2>
+                        <p>Awaiting cashier approval</p>
                     </div>
                 </div>
 
@@ -160,14 +158,13 @@ $pendingEncashments = 3;
                             <img src="<?= ICONS_URL ?>/pending-encashments.png" alt="">
                         </div>
                         <span>Pending Encashments</span>
-                        <h2><?php echo $pendingEncashments; ?></h2>
+                        <h2><?php echo (int) $financials['pending_encashments']; ?></h2>
                         <p>Awaiting disbursement</p>
                     </div>
                 </div>
 
             </section>
 
-            <!-- User Demographics -->
             <div class="section-title mb-3">
                 <h4 style="font-size: 18px; font-weight: 800; color: var(--emerald-950); margin: 0;">User Demographics</h4>
             </div>
@@ -180,7 +177,7 @@ $pendingEncashments = 3;
                         </div>
                         <div class="mini-metric-info">
                             <span>Total Users</span>
-                            <h3><?php echo $totalUsers; ?></h3>
+                            <h3><?php echo (int) $demographics['total_users']; ?></h3>
                         </div>
                     </div>
                 </div>
@@ -192,7 +189,7 @@ $pendingEncashments = 3;
                         </div>
                         <div class="mini-metric-info">
                             <span>Active Students</span>
-                            <h3><?php echo $activeStudents; ?></h3>
+                            <h3><?php echo (int) $demographics['active_students']; ?></h3>
                         </div>
                     </div>
                 </div>
@@ -204,7 +201,7 @@ $pendingEncashments = 3;
                         </div>
                         <div class="mini-metric-info">
                             <span>Active Merchants</span>
-                            <h3><?php echo $activeMerchants; ?></h3>
+                            <h3><?php echo (int) $demographics['active_merchants']; ?></h3>
                         </div>
                     </div>
                 </div>
@@ -216,7 +213,7 @@ $pendingEncashments = 3;
                         </div>
                         <div class="mini-metric-info">
                             <span>Active Visitors</span>
-                            <h3><?php echo $activeVisitors; ?></h3>
+                            <h3><?php echo (int) $demographics['active_visitors']; ?></h3>
                         </div>
                     </div>
                 </div>
@@ -251,45 +248,33 @@ $pendingEncashments = 3;
 
                         <div class="quick-actions">
                             <a href="<?= ADMIN_URL ?>/users.php">
-                                <span>
-                                    Manage Users
-                                </span>
-                                <b>›</b>
+                                <span>Manage Users</span>
+                                <b>&rsaquo;</b>
                             </a>
 
                             <a href="<?= ADMIN_URL ?>/topups.php">
-                                <span>
-                                    Process Top-ups
-                                </span>
-                                <b>›</b>
+                                <span>Process Top-ups</span>
+                                <b>&rsaquo;</b>
                             </a>
 
                             <a href="<?= ADMIN_URL ?>/encashments.php">
-                                <span>
-                                    Encashments
-                                </span>
-                                <b>›</b>
+                                <span>Encashments</span>
+                                <b>&rsaquo;</b>
                             </a>
 
                             <a href="<?= ADMIN_URL ?>/visitors.php">
-                                <span>
-                                    Visitors Management
-                                </span>
-                                <b>›</b>
+                                <span>Visitors Management</span>
+                                <b>&rsaquo;</b>
                             </a>
 
                             <a href="<?= ADMIN_URL ?>/transactions.php">
-                                <span>
-                                    All Transactions
-                                </span>
-                                <b>›</b>
+                                <span>All Transactions</span>
+                                <b>&rsaquo;</b>
                             </a>
 
                             <a href="<?= ADMIN_URL ?>/economy.php">
-                                <span>
-                                    System Economy
-                                </span>
-                                <b>›</b>
+                                <span>System Economy</span>
+                                <b>&rsaquo;</b>
                             </a>
                         </div>
                     </div>
@@ -308,7 +293,7 @@ $pendingEncashments = 3;
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table premium-table align-middle">
+                    <table class="table premium-table align-middle js-datatable" id="dashboardTransactionsTable" data-page-length="10">
                         <thead>
                             <tr>
                                 <th>Reference</th>
@@ -322,41 +307,27 @@ $pendingEncashments = 3;
                         </thead>
 
                         <tbody>
+                            <?php if (empty($recentTransactions)): ?>
                             <tr>
-                                <td>TXN-001</td>
-                                <td>
-                                    Payment
-                                </td>
-                                <td>₱120.00</td>
-                                <td>Juan Dela Cruz</td>
-                                <td>Campus Canteen</td>
-                                <td><span class="badge-success">Completed</span></td>
-                                <td>10:23 AM</td>
+                                <td colspan="7" class="text-center text-muted py-4">No transaction history is available yet.</td>
                             </tr>
+                            <?php endif; ?>
 
+                            <?php foreach ($recentTransactions as $transaction): ?>
                             <tr>
-                                <td>TXN-002</td>
+                                <td><?php echo gjc_e($transaction['ref']); ?></td>
+                                <td><?php echo gjc_e($transaction['type_label']); ?></td>
+                                <td><?php echo gjc_money($transaction['amount']); ?></td>
+                                <td><?php echo gjc_e($transaction['sender']); ?></td>
+                                <td><?php echo gjc_e($transaction['receiver']); ?></td>
                                 <td>
-                                    Top-up
+                                    <span class="<?php echo gjc_transaction_is_success($transaction['status']) ? 'badge-success' : 'badge-warning'; ?>">
+                                        <?php echo gjc_e($transaction['status_label']); ?>
+                                    </span>
                                 </td>
-                                <td>₱500.00</td>
-                                <td>Maria Santos</td>
-                                <td>Cashier</td>
-                                <td><span class="badge-warning">Pending</span></td>
-                                <td>09:45 AM</td>
+                                <td><?php echo gjc_e($transaction['time_label']); ?></td>
                             </tr>
-
-                            <tr>
-                                <td>TXN-003</td>
-                                <td>
-                                    Encashment
-                                </td>
-                                <td>₱2,000.00</td>
-                                <td>Campus Store</td>
-                                <td>Finance Office</td>
-                                <td><span class="badge-warning">Pending</span></td>
-                                <td>08:30 AM</td>
-                            </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -367,7 +338,14 @@ $pendingEncashments = 3;
 
     </div>
 
+    <script>
+    window.dashboardTransactionChart = <?php echo json_encode($transactionChart, JSON_UNESCAPED_SLASHES); ?>;
+    </script>
     <script src="<?= JS_URL ?>/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= JS_URL ?>/admin_datatables.js"></script>
     <script src="<?= JS_URL ?>/dashboard_chart.js"></script>
 
     <script>

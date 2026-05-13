@@ -35,6 +35,7 @@ $topupHistory = $db->query(
     <link rel="stylesheet" href="<?= CSS_URL ?>/admin.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/topups.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/responsive.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -169,7 +170,7 @@ $topupHistory = $db->query(
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table topup-table align-middle">
+                    <table class="table topup-table align-middle js-datatable" id="pendingTopupsTable" data-page-length="10">
                         <thead>
                             <tr>
                                 <th>Reference</th>
@@ -226,7 +227,7 @@ $topupHistory = $db->query(
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table topup-table align-middle">
+                    <table class="table topup-table align-middle js-datatable" id="topupHistoryTable" data-page-length="10">
                         <thead>
                             <tr>
                                 <th>Reference</th>
@@ -265,6 +266,10 @@ $topupHistory = $db->query(
     </div>
 
     <script src="<?= JS_URL ?>/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= JS_URL ?>/admin_datatables.js"></script>
 
     <script>
     function toggleSidebar() {

@@ -1,104 +1,78 @@
 <?php
-/**
- * admin/api/voucher.php
- * ─────────────────────────────────────────────────────────────────────────────
- * Admin API for voucher management.
- * All actions require session (cashier or super-admin).
- *
- * POST actions:
- *   create  → mint a new visitor voucher
- *   expire  → force-expire a voucher (admin override)
- *   list    → paginated voucher list
- *   stats   → summary counts/values
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
 declare(strict_types=1);
+
 header('Content-Type: application/json');
 
 session_start();
 require_once __DIR__ . '/../../connection/config.php';
 require_once __DIR__ . '/../../connection/pdo.php';
+require_once __DIR__ . '/../../connection/app.php';
 require_once __DIR__ . '/../../connection/VoucherEngine.php';
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
-// Mock session if not set
-if (!isset($_SESSION['userID'])) {
-    $_SESSION['userID'] = 1;
-    $_SESSION['roleID'] = 1;
-}
-
-$userId = (int)$_SESSION['userID'];
-$roleId = (int)$_SESSION['roleID'];
-if (!in_array($roleId, [1, 2])) {
+$userId = gjc_user_id();
+$role = gjc_current_role();
+$allowedRoles = ['cashier', 'sub-admin', 'admin', 'super-admin'];
+if (!$userId || !in_array($role, $allowedRoles, true)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Admin or Cashier access required.']);
+    echo json_encode(['success' => false, 'error' => 'Admin or cashier access required.']);
     exit;
 }
 
-// ── Parse body ───────────────────────────────────────────────────────────────
-$ct = $_SERVER['CONTENT_TYPE'] ?? '';
-$body = str_contains($ct, 'application/json')
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+$body = str_contains($contentType, 'application/json')
     ? (json_decode(file_get_contents('php://input'), true) ?? [])
     : array_merge($_GET, $_POST);
 
-$action = strtolower(trim($body['action'] ?? $_GET['action'] ?? ''));
-$ve     = new VoucherEngine($db);
+$action = strtolower(trim((string) ($body['action'] ?? $_GET['action'] ?? '')));
+$ve = new VoucherEngine($db);
 
 try {
     switch ($action) {
-
-        // ── CREATE voucher ────────────────────────────────────────────────
         case 'create':
-            $amount      = (float)($body['amount']          ?? 0);
-            $name        = trim($body['visitor_name']        ?? '');
-            $contact     = trim($body['visitor_contact']     ?? '');
-            $expiry      = (int)($body['expiry_hours']       ?? 24);
-            $refundable  = !empty($body['is_refundable']);
+            $amount = (float) ($body['amount'] ?? 0);
+            $name = trim((string) ($body['visitor_name'] ?? ''));
+            $contact = trim((string) ($body['visitor_contact'] ?? ''));
+            $expiry = (int) ($body['expiry_hours'] ?? VoucherEngine::DEFAULT_EXPIRY_HOURS);
+            $refundable = !empty($body['is_refundable']);
 
             $result = $ve->createVoucher($amount, $name, $contact, $userId, $expiry, $refundable);
             echo json_encode($result);
             break;
 
-        // ── FORCE EXPIRE ──────────────────────────────────────────────────
         case 'expire':
-            if ($roleId !== 1) {
-                throw new RuntimeException('Only Super-Admin can force-expire vouchers.');
+            if (!in_array($role, ['admin', 'super-admin'], true)) {
+                throw new RuntimeException('Only admin-level users can force-expire vouchers.');
             }
-            $vId = (int)($body['voucher_id'] ?? 0);
-            echo json_encode($ve->adminExpireVoucher($vId, $userId));
+
+            $voucherId = (int) ($body['voucher_id'] ?? 0);
+            echo json_encode($ve->adminExpireVoucher($voucherId, $userId));
             break;
 
-        // ── LIST vouchers ─────────────────────────────────────────────────
         case 'list':
-            $status = $body['status'] ?? 'all';
-            $limit  = min((int)($body['limit']  ?? 25), 100);
-            $offset = (int)($body['offset'] ?? 0);
+            $status = (string) ($body['status'] ?? 'all');
+            $limit = min((int) ($body['limit'] ?? 25), 100);
+            $offset = (int) ($body['offset'] ?? 0);
             echo json_encode(['success' => true, 'data' => $ve->listVouchers($status, $limit, $offset)]);
             break;
 
-        // ── STATS ─────────────────────────────────────────────────────────
         case 'stats':
             echo json_encode(array_merge(['success' => true], $ve->getSummaryStats()));
             break;
 
-        // ── PAYMENTS for a single voucher ─────────────────────────────────
         case 'payments':
-            $vId = (int)($body['voucher_id'] ?? 0);
-            echo json_encode(['success' => true, 'data' => $ve->getVoucherPayments($vId)]);
+            $voucherId = (int) ($body['voucher_id'] ?? 0);
+            echo json_encode(['success' => true, 'data' => $ve->getVoucherPayments($voucherId)]);
             break;
 
-        // ── EXPIRING SOON ─────────────────────────────────────────────────
         case 'expiring_soon':
-            $mins = (int)($body['minutes'] ?? 60);
-            echo json_encode(['success' => true, 'data' => $ve->expiringSoon($mins)]);
+            $minutes = (int) ($body['minutes'] ?? 60);
+            echo json_encode(['success' => true, 'data' => $ve->expiringSoon($minutes)]);
             break;
 
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => "Unknown action: '{$action}'"]);
     }
-
 } catch (RuntimeException | InvalidArgumentException $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

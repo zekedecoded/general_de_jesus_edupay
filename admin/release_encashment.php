@@ -1,14 +1,4 @@
 <?php
-/**
- * release_encashment.php — Cashier/Admin Action
- *
- * Processes a merchant settlement (encashment):
- *   merchant wallet  →  vault  (recycling loop)
- *
- * Usage: POST release_encashment.php
- *   { encashment_id, merchant_wallet_id, amount }
- */
-
 session_start();
 require_once __DIR__ . '/../connection/config.php';
 require_once __DIR__ . '/../connection/pdo.php';
@@ -17,7 +7,6 @@ require_once __DIR__ . '/../connection/CirculationEngine.php';
 
 header('Content-Type: application/json');
 
-// ── Auth guard ──────────────────────────────────────────────
 $sessionUserId = gjc_user_id();
 $sessionRole = gjc_current_role();
 $allowedRoles = ['cashier', 'sub-admin', 'admin', 'super-admin'];
@@ -27,10 +16,9 @@ if (!$sessionUserId || !in_array($sessionRole, $allowedRoles, true)) {
     exit;
 }
 
-// ── Input validation ────────────────────────────────────────
-$encashmentId    = filter_input(INPUT_POST, 'encashment_id',     FILTER_VALIDATE_INT);
+$encashmentId = filter_input(INPUT_POST, 'encashment_id', FILTER_VALIDATE_INT);
 $merchantWalletId = filter_input(INPUT_POST, 'merchant_wallet_id', FILTER_VALIDATE_INT);
-$amount           = filter_input(INPUT_POST, 'amount',            FILTER_VALIDATE_FLOAT);
+$amount = filter_input(INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT);
 
 if (!$encashmentId || !$merchantWalletId || !$amount || $amount <= 0) {
     http_response_code(400);
@@ -38,28 +26,59 @@ if (!$encashmentId || !$merchantWalletId || !$amount || $amount <= 0) {
     exit;
 }
 
-// ── Execute ─────────────────────────────────────────────────
 try {
-    $engine = new CirculationEngine($db);
-    $result = $engine->merchantSettle($merchantWalletId, $amount, $sessionUserId);
+    $requestStmt = $db->prepare(
+        "SELECT id, merchant_wallet_id, amount, status
+           FROM encashment_requests
+          WHERE id = ?
+          LIMIT 1"
+    );
+    $requestStmt->execute([$encashmentId]);
+    $request = $requestStmt->fetch(PDO::FETCH_ASSOC);
 
-    // Update encashment request status
-    $db->prepare(
+    if (!$request) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Encashment request not found.']);
+        exit;
+    }
+
+    if (($request['status'] ?? '') !== 'pending') {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'This encashment request has already been processed.']);
+        exit;
+    }
+
+    $requestWalletId = (int) ($request['merchant_wallet_id'] ?? 0);
+    $requestAmount = (float) ($request['amount'] ?? 0);
+    if ($requestWalletId !== $merchantWalletId || abs($requestAmount - (float) $amount) > 0.01) {
+        http_response_code(409);
+        echo json_encode(['success' => false, 'message' => 'Encashment request data no longer matches the current record. Refresh and try again.']);
+        exit;
+    }
+
+    $engine = new CirculationEngine($db);
+    $result = $engine->merchantSettle($requestWalletId, $requestAmount, $sessionUserId);
+
+    $update = $db->prepare(
         "UPDATE encashment_requests
-            SET status       = 'released',
-                released_by  = ?,
-                released_at  = NOW(),
-                reference_no = ?
-          WHERE id = ?"
-    )->execute([$sessionUserId, $result['reference'], $encashmentId]);
+            SET status = 'released',
+                released_by = ?,
+                released_at = NOW()
+          WHERE id = ?
+            AND status = 'pending'"
+    );
+    $update->execute([$sessionUserId, $encashmentId]);
+
+    if ($update->rowCount() !== 1) {
+        throw new RuntimeException('Encashment release state changed before completion. Please refresh and verify the record.');
+    }
 
     echo json_encode([
-        'success'   => true,
-        'message'   => "₱" . number_format($amount, 2) . " settled. Points returned to vault.",
+        'success' => true,
+        'message' => 'PHP ' . number_format($requestAmount, 2) . ' settled. Points returned to vault.',
         'reference' => $result['reference'],
         'vault_after' => $result['vault_after'],
     ]);
-
 } catch (RuntimeException $e) {
     http_response_code(422);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

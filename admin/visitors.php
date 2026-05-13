@@ -2,13 +2,10 @@
 session_start();
 require_once __DIR__ . '/../connection/config.php';
 require_once __DIR__ . '/../connection/pdo.php';
+require_once __DIR__ . '/../connection/app.php';
 require_once __DIR__ . '/../connection/VoucherEngine.php';
 
-// Mock session for testing if login isn't fully implemented yet
-if (!isset($_SESSION['userID'])) {
-    $_SESSION['userID'] = 1; // Admin
-    $_SESSION['roleID'] = 1;
-}
+gjc_require_role(['admin', 'cashier', 'sub-admin', 'super-admin']);
 
 $ve = new VoucherEngine($db);
 
@@ -33,6 +30,7 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
     <link rel="stylesheet" href="<?= CSS_URL ?>/admin.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/visitors.css">
     <link rel="stylesheet" href="<?= CSS_URL ?>/responsive.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -115,8 +113,9 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                 </div>
 
                 <div class="ms-auto me-4">
-                    <button type="button" class="btn btn-success fw-bold px-4 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#mintVoucherModal">
-                        + Mint New Voucher
+                    <button type="button" class="visitor-primary-btn" data-bs-toggle="modal" data-bs-target="#mintVoucherModal">
+                        <span>+</span>
+                        Mint New Voucher
                     </button>
                 </div>
 
@@ -135,9 +134,10 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                         <img src="<?= ICONS_URL ?>/visitors.png" alt="">
                     </div>
 
-                    <div>
+                    <div class="visitor-stat-copy">
                         <span>Active Visitors</span>
                         <h2><?php echo $activeVisitors; ?></h2>
+                        <p>Usable guest vouchers in circulation</p>
                     </div>
                 </div>
 
@@ -146,9 +146,10 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                         <img src="<?= ICONS_URL ?>/registered_today.png" alt="">
                     </div>
 
-                    <div>
+                    <div class="visitor-stat-copy">
                         <span>All-Time Issued</span>
                         <h2><?php echo $stats['total_all_time'] ?? 0; ?></h2>
+                        <p>Total visitor vouchers created</p>
                     </div>
                 </div>
 
@@ -190,7 +191,7 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table visitors-table align-middle">
+                    <table class="table visitors-table align-middle js-datatable" id="visitorsTable" data-page-length="10" data-empty-message="No active visitors found.">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -345,6 +346,10 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
     </div>
 
     <script src="<?= JS_URL ?>/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="<?= JS_URL ?>/admin_datatables.js"></script>
 
     <script>
     function toggleSidebar() {

@@ -244,7 +244,9 @@
   color: #064420;
 }
 
-.transaction-status.completed {
+.transaction-status.completed,
+.transaction-status.approved,
+.transaction-status.released {
   background: #dff3e6;
   color: #064420;
 }
@@ -255,7 +257,9 @@
   color: #7a5a00;
 }
 
-.transaction-status.rejected {
+.transaction-status.rejected,
+.transaction-status.failed,
+.transaction-status.reversed {
   background: #eef2ee;
   color: #4b5b52;
 }
