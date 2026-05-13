@@ -3,15 +3,21 @@
 // ============================================================
 //  BASE
 // ============================================================
-define('BASE_PATH', dirname(__DIR__)); // points to project root (one level up from connection/)
+define('BASE_PATH', dirname(__DIR__)); // project root
 
 $projectFolder = basename(BASE_PATH);
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+
+// Handle ngrok and other reverse proxies (X-Forwarded-Proto)
+if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+    $protocol = $_SERVER['HTTP_X_FORWARDED_PROTO'];
+}
+
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-define('BASE_URL', $scheme . '://' . $host . '/' . $projectFolder);
+define('BASE_URL', $protocol . '://' . $host . '/' . $projectFolder);
 
 // ============================================================
-//  URL CONSTANTS  (for HTML links, redirects, asset references)
+//  URL CONSTANTS
 // ============================================================
 define('ASSETS_URL',     BASE_URL . '/assets');
 define('CSS_URL',        BASE_URL . '/assets/css');
@@ -26,7 +32,7 @@ define('INCLUDES_URL',   BASE_URL . '/includes');
 define('CONNECTION_URL', BASE_URL . '/connection');
 
 // ============================================================
-//  FILE PATH CONSTANTS  (for require_once / include)
+//  FILE PATH CONSTANTS
 // ============================================================
 define('ASSETS_PATH',     BASE_PATH . '/assets');
 define('CSS_PATH',        BASE_PATH . '/assets/css');

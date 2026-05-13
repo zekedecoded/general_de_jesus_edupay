@@ -471,6 +471,7 @@ class CirculationEngine
         $this->db->beginTransaction();
         try {
             $settings = $this->lockSettings();
+            $vaultBefore = (float) $settings['cashier_vault_points'];
 
             $vStmt = $this->db->prepare(
                 "SELECT * FROM vouchers WHERE id = ? AND status = 'active' FOR UPDATE"
@@ -484,13 +485,16 @@ class CirculationEngine
 
             $recycled = $voucher['remaining_balance'];
 
-            // Mark expired (DB trigger also returns balance to vault as safety net)
+            // Mark expired. Some installs have a DB trigger that recycles the
+            // balance automatically; older installs need the PHP fallback below.
             $this->db->prepare(
                 "UPDATE vouchers SET status = 'expired' WHERE id = ?"
             )->execute([$voucherId]);
 
-            // Explicitly credit vault (engine is authoritative)
-            if ($recycled > 0) {
+            $vaultAfterExpire = $this->getVaultBalance();
+            $triggerRecycled = abs($vaultAfterExpire - ($vaultBefore + (float) $recycled)) <= 0.01;
+
+            if ((float) $recycled > 0 && !$triggerRecycled) {
                 $this->db->prepare(
                     "UPDATE system_settings
                         SET cashier_vault_points = cashier_vault_points + ?
@@ -498,13 +502,13 @@ class CirculationEngine
                 )->execute([$recycled]);
             }
 
-            $vaultAfter = $settings['cashier_vault_points'] + $recycled;
+            $vaultAfter = $this->getVaultBalance();
 
             $this->validateCirculation($settings['total_circulation_cap']);
 
             $ref = $this->logTransaction(
                 self::TXN_VOUCHER_EXPIRE, $initiatedBy, max($recycled, 0.01),
-                $settings['cashier_vault_points'], $vaultAfter,
+                $vaultBefore, $vaultAfter,
                 voucherId: $voucherId,
                 notes: "Recycled ₱{$recycled} from expired voucher #{$voucherId}"
             );
@@ -528,8 +532,18 @@ class CirculationEngine
      */
     public function getCirculationSnapshot(): array
     {
-        $row = $this->db->query("SELECT * FROM v_circulation_snapshot")->fetch();
-        return $row ?: [];
+        foreach (['v_circulation_health', 'v_circulation_snapshot'] as $view) {
+            try {
+                $row = $this->db->query("SELECT * FROM {$view}")->fetch();
+                if ($row) {
+                    return $row;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return $this->buildCirculationSnapshot();
     }
 
     // ══════════════════════════════════════════════════════════
@@ -584,6 +598,43 @@ class CirculationEngine
             throw new RuntimeException("SYSTEM_SETTINGS_MISSING: Cannot find singleton row.");
         }
         return $row;
+    }
+
+    private function getVaultBalance(): float
+    {
+        return (float) $this->db
+            ->query("SELECT cashier_vault_points FROM system_settings WHERE id = 1")
+            ->fetchColumn();
+    }
+
+    private function buildCirculationSnapshot(): array
+    {
+        $row = $this->db->query(
+            "SELECT
+                ss.total_circulation_cap AS cap,
+                ss.cashier_vault_points AS vault,
+                COALESCE((SELECT SUM(balance) FROM student_wallets), 0) AS student_wallets_total,
+                COALESCE((SELECT SUM(balance) FROM merchant_wallets), 0) AS merchant_wallets_total,
+                COALESCE((SELECT SUM(remaining_balance) FROM vouchers WHERE status = 'active'), 0) AS active_vouchers_total,
+                (
+                    ss.cashier_vault_points
+                    + COALESCE((SELECT SUM(balance) FROM student_wallets), 0)
+                    + COALESCE((SELECT SUM(balance) FROM merchant_wallets), 0)
+                    + COALESCE((SELECT SUM(remaining_balance) FROM vouchers WHERE status = 'active'), 0)
+                ) AS total_in_circulation,
+                (
+                    ss.total_circulation_cap
+                    - ss.cashier_vault_points
+                    - COALESCE((SELECT SUM(balance) FROM student_wallets), 0)
+                    - COALESCE((SELECT SUM(balance) FROM merchant_wallets), 0)
+                    - COALESCE((SELECT SUM(remaining_balance) FROM vouchers WHERE status = 'active'), 0)
+                ) AS circulation_drift,
+                ss.updated_at AS as_of
+             FROM system_settings ss
+             WHERE ss.id = 1"
+        )->fetch();
+
+        return $row ?: [];
     }
 
     /**

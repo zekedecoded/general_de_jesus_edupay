@@ -21,6 +21,7 @@ header('Content-Type: application/json');
 session_start();
 require_once __DIR__ . '/../../connection/config.php';
 require_once __DIR__ . '/../../connection/pdo.php';
+require_once __DIR__ . '/../../connection/app.php';
 require_once __DIR__ . '/../../connection/CirculationEngine.php';
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -31,7 +32,8 @@ if (!isset($_SESSION['userID'], $_SESSION['roleID'])) {
 }
 
 $userId = (int)$_SESSION['userID'];
-$roleId = (int)$_SESSION['roleID'];
+$role = gjc_current_role();
+$adminEconomyRoles = ['admin', 'cashier', 'sub-admin', 'super-admin'];
 
 // ── Parse body ───────────────────────────────────────────────────────────────
 $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
@@ -49,8 +51,7 @@ try {
 
         // ── CASH-IN: Vault → Student ────────────────────────────────────────
         case 'topup':
-            // Only cashier (role 2) or super-admin (role 1) can top-up
-            if (!in_array($roleId, [1, 2])) throw new RuntimeException('ACCESS_DENIED');
+            if (!in_array($role, $adminEconomyRoles, true)) throw new RuntimeException('ACCESS_DENIED');
 
             $walletId = (int)($body['student_wallet_id'] ?? 0);
             $amount   = (float)($body['amount'] ?? 0);
@@ -71,7 +72,7 @@ try {
 
         // ── SETTLEMENT: Merchant → Vault ─────────────────────────────────────
         case 'settle':
-            if (!in_array($roleId, [1, 2])) throw new RuntimeException('ACCESS_DENIED');
+            if (!in_array($role, $adminEconomyRoles, true)) throw new RuntimeException('ACCESS_DENIED');
 
             $merchantWallet = (int)($body['merchant_wallet_id'] ?? 0);
             $amount         = (float)($body['amount'] ?? 0);
@@ -82,7 +83,7 @@ try {
 
         // ── VOUCHER CREATE: Vault → Voucher Pool ─────────────────────────────
         case 'voucher':
-            if (!in_array($roleId, [1, 2])) throw new RuntimeException('ACCESS_DENIED');
+            if (!in_array($role, $adminEconomyRoles, true)) throw new RuntimeException('ACCESS_DENIED');
 
             $amount        = (float)($body['amount']           ?? 0);
             $visitorName   = trim($body['visitor_name']        ?? '');
@@ -109,7 +110,7 @@ try {
 
         // ── EXPIRE VOUCHER: Recycle remaining balance → Vault ────────────────
         case 'expire_voucher':
-            if (!in_array($roleId, [1, 2])) throw new RuntimeException('ACCESS_DENIED');
+            if (!in_array($role, $adminEconomyRoles, true)) throw new RuntimeException('ACCESS_DENIED');
 
             $voucherId = (int)($body['voucher_id'] ?? 0);
             $result    = $engine->expireVoucher($voucherId, $userId);

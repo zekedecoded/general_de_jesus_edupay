@@ -62,6 +62,10 @@ $serverTime = "Apr 25, 2026 12:34:46 AM";
                     <img src="<?= ICONS_URL ?>/transactions.png" class="nav-icon" alt="">
                     <span class="nav-text">Transactions</span>
                 </a>
+                <a href="<?= ADMIN_URL ?>/economy.php">
+                    <img src="<?= ICONS_URL ?>/wallet.png" class="nav-icon" alt="">
+                    <span class="nav-text">Economy</span>
+                </a>
 
                 <a href="<?= ADMIN_URL ?>/visitors.php">
                     <img src="<?= ICONS_URL ?>/visitors.png" class="nav-icon" alt="">

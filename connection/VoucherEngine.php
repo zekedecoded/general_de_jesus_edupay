@@ -462,6 +462,14 @@ class VoucherEngine
     {
         $this->db->beginTransaction();
         try {
+            $settings = $this->db->query(
+                "SELECT * FROM system_settings WHERE id = 1 FOR UPDATE"
+            )->fetch();
+            if (!$settings) {
+                throw new RuntimeException('SYSTEM_SETTINGS_MISSING: Cannot find singleton row.');
+            }
+            $vaultBefore = (float) ($settings['cashier_vault_points'] ?? 0);
+
             $vStmt = $this->db->prepare(
                 "SELECT * FROM vouchers WHERE id = ? FOR UPDATE"
             );
@@ -475,7 +483,8 @@ class VoucherEngine
 
             $recycled = (float) $voucher['remaining_balance'];
 
-            // Mark expired (DB trigger will also add to vault as safety net)
+            // Mark expired. Some installs have a DB trigger that recycles the
+            // balance automatically; older installs need the PHP fallback below.
             $this->db->prepare(
                 "UPDATE vouchers
                     SET status      = 'expired',
@@ -483,14 +492,19 @@ class VoucherEngine
                   WHERE id = ?"
             )->execute([$voucherId]);
 
-            // Explicit vault credit (engine is authoritative over trigger)
-            if ($recycled > 0) {
+            $vaultAfterExpire = $this->getVaultBalance();
+            $triggerRecycled = abs($vaultAfterExpire - ($vaultBefore + $recycled)) <= 0.01;
+
+            if ($recycled > 0 && !$triggerRecycled) {
                 $this->db->prepare(
                     "UPDATE system_settings
                         SET cashier_vault_points = cashier_vault_points + ?
                       WHERE id = 1"
                 )->execute([$recycled]);
             }
+
+            $vaultAfter = $this->getVaultBalance();
+            $this->validateCirculation((float) $settings['total_circulation_cap']);
 
             // Audit log
             $ref = 'EXP-' . strtoupper(date('Ymd')) . '-' . str_pad(
@@ -499,9 +513,6 @@ class VoucherEngine
                 '0',
                 STR_PAD_LEFT
             );
-            $settings = $this->db->query(
-                "SELECT * FROM system_settings WHERE id = 1"
-            )->fetch();
 
             $this->db->prepare(
                 "INSERT INTO transactions
@@ -518,9 +529,9 @@ class VoucherEngine
                         $ref,
                         $triggeredBy,
                         $voucherId,
-                        $recycled,
-                        (float) $settings['cashier_vault_points'] - $recycled,
-                        (float) $settings['cashier_vault_points'],
+                        max($recycled, 0.01),
+                        $vaultBefore,
+                        $vaultAfter,
                         "LAZY EXPIRY: Voucher #{$voucherId} ({$voucher['voucher_code']}) expired. " .
                         "Recycled ₱{$recycled} to vault. Non-refundable: " .
                         ($voucher['is_refundable'] ? 'No' : 'Yes'),
@@ -621,6 +632,13 @@ class VoucherEngine
     private function generateCode(): string
     {
         return 'VCH-' . strtoupper(bin2hex(random_bytes(4)));
+    }
+
+    private function getVaultBalance(): float
+    {
+        return (float) $this->db
+            ->query("SELECT cashier_vault_points FROM system_settings WHERE id = 1")
+            ->fetchColumn();
     }
 
     private function validateCirculation(float $expectedCap): void

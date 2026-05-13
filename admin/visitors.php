@@ -81,6 +81,11 @@ $visitors = $ve->listVouchers('active', 50); // Get top 50 active
                     <span class="nav-text">Transactions</span>
                 </a>
 
+                <a href="<?= ADMIN_URL ?>/economy.php">
+                    <img src="<?= ICONS_URL ?>/wallet.png" class="nav-icon" alt="">
+                    <span class="nav-text">Economy</span>
+                </a>
+
                 <a href="<?= ADMIN_URL ?>/visitors.php" class="active">
                     <img src="<?= ICONS_URL ?>/visitors.png" class="nav-icon" alt="">
                     <span class="nav-text">Visitors</span>

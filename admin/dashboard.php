@@ -74,6 +74,11 @@ $pendingEncashments = 3;
                     <span class="nav-text">Transactions</span>
                 </a>
 
+                <a href="<?= ADMIN_URL ?>/economy.php">
+                    <img src="<?= ICONS_URL ?>/wallet.png" class="nav-icon" alt="">
+                    <span class="nav-text">Economy</span>
+                </a>
+
                 <a href="<?= ADMIN_URL ?>/visitors.php">
                     <img src="<?= ICONS_URL ?>/visitors.png" class="nav-icon" alt="">
                     <span class="nav-text">Visitors</span>
@@ -279,6 +284,13 @@ $pendingEncashments = 3;
                                 </span>
                                 <b>›</b>
                             </a>
+
+                            <a href="<?= ADMIN_URL ?>/economy.php">
+                                <span>
+                                    System Economy
+                                </span>
+                                <b>›</b>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -350,8 +362,6 @@ $pendingEncashments = 3;
                 </div>
             </section>
 
-
-            <?php require_once INCLUDES_PATH . '/circulation_widget.php'; ?>
 
         </main>
 
